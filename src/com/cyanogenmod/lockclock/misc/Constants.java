@@ -51,5 +51,5 @@ public class Constants {
     public static final String WEATHER_LAST_UPDATE = "last_weather_update";
     public static final String WEATHER_DATA = "weather_data";
 
-    public static final int MAX_CALENDAR_ITEMS = 3;
+    public static final int MAX_CALENDAR_ITEMS = 10;
 }
