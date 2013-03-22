@@ -23,16 +23,29 @@ import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.util.Log;
 import com.cyanogenmod.lockclock.misc.Constants;
+import com.cyanogenmod.lockclock.notification.MissedCallNotification;
+import com.cyanogenmod.lockclock.notification.NewMessageNotification;
+import com.cyanogenmod.lockclock.notification.Notification;
 import com.cyanogenmod.lockclock.weather.WeatherUpdateService;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ClockWidgetProvider extends AppWidgetProvider {
     private static final String TAG = "ClockWidgetProvider";
     private static boolean D = Constants.DEBUG;
 
+    private static ArrayList<Notification> mNotifications = new ArrayList<Notification>();
+
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         // Default handling, triggered via the super class
         if (D) Log.v(TAG, "Updating widgets, default handling.");
+        if (mNotifications.isEmpty()) {
+            // include available notification services
+            mNotifications.add(new MissedCallNotification(context));
+            mNotifications.add(new NewMessageNotification(context));
+        }
         updateWidgets(context, false, false);
     }
 
@@ -57,16 +70,16 @@ public class ClockWidgetProvider extends AppWidgetProvider {
                 context.stopService(i);
             }
 
-        // Boot completed, schedule next weather update
+            // Boot completed, schedule next weather update
         } else if (Intent.ACTION_BOOT_COMPLETED.equals(action)) {
             WeatherUpdateService.scheduleNextUpdate(context);
 
-        // A widget has been deleted, prevent our handling and ask the super class handle it
+            // A widget has been deleted, prevent our handling and ask the super class handle it
         } else if (AppWidgetManager.ACTION_APPWIDGET_DELETED.equals(action)
                 || AppWidgetManager.ACTION_APPWIDGET_DISABLED.equals(action)) {
             super.onReceive(context, intent);
 
-        // Calendar, Time or a settings change, force a calendar refresh
+            // Calendar, Time or a settings change, force a calendar refresh
         } else if (Intent.ACTION_PROVIDER_CHANGED.equals(action)
                 || Intent.ACTION_TIME_CHANGED.equals(action)
                 || Intent.ACTION_TIMEZONE_CHANGED.equals(action)
@@ -75,12 +88,12 @@ public class ClockWidgetProvider extends AppWidgetProvider {
                 || ClockWidgetService.ACTION_REFRESH_CALENDAR.equals(action)) {
             updateWidgets(context, true, false);
 
-        // There are no events to show in the Calendar panel, hide it explicitly
+            // There are no events to show in the Calendar panel, hide it explicitly
         } else if (ClockWidgetService.ACTION_HIDE_CALENDAR.equals(action)) {
             updateWidgets(context, false, true);
 
-        // Something we did not handle, let the super class deal with it.
-        // This includes the REFRESH_CLOCK intent from Clock settings
+            // Something we did not handle, let the super class deal with it.
+            // This includes the REFRESH_CLOCK intent from Clock settings
         } else {
             if (D) Log.v(TAG, "We did not handle the intent, trigger normal handling");
             super.onReceive(context, intent);
@@ -116,7 +129,11 @@ public class ClockWidgetProvider extends AppWidgetProvider {
     @Override
     public void onDisabled(Context context) {
         if (D) Log.d(TAG, "Cleaning up: Clearing all pending alarms");
-        ClockWidgetService.cancelUpdates(context);
-        WeatherUpdateService.cancelUpdates(context);
+        ClockWidgetService.cancelUpdates(context.getApplicationContext());
+        WeatherUpdateService.cancelUpdates(context.getApplicationContext());
+    }
+
+    public static List<Notification> getNotifications() {
+        return mNotifications;
     }
 }

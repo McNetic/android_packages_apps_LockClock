@@ -470,7 +470,7 @@ class CalendarRemoteViewsFactory implements RemoteViewsFactory {
      * the next event time boundary (start/end).
      */
     private void scheduleCalendarUpdate(Context context) {
-        PendingIntent pi = ClockWidgetService.getRefreshIntent(context);
+        PendingIntent pi = ClockWidgetService.getCalendarRefreshIntent(context);
         long updateTime = calculateUpdateTime(context);
 
         // Clear any old alarms and schedule the new alarm

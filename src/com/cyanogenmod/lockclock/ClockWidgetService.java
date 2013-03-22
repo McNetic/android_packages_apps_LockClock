@@ -37,8 +37,13 @@ import com.cyanogenmod.lockclock.calendar.CalendarWidgetService;
 import com.cyanogenmod.lockclock.misc.Constants;
 import com.cyanogenmod.lockclock.misc.Preferences;
 import com.cyanogenmod.lockclock.misc.WidgetUtils;
+import com.cyanogenmod.lockclock.notification.MissedCallNotification;
+import com.cyanogenmod.lockclock.notification.NewMessageNotification;
+import com.cyanogenmod.lockclock.notification.Notification;
 import com.cyanogenmod.lockclock.weather.WeatherInfo;
 import com.cyanogenmod.lockclock.weather.WeatherUpdateService;
+
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 
@@ -128,6 +133,9 @@ public class ClockWidgetService extends IntentService {
             // Always Refresh the Clock widget
             refreshClock(remoteViews, smallWidget, digitalClock);
             refreshAlarmStatus(remoteViews, smallWidget);
+
+            // Refresh Notification widget
+            refreshNotification(remoteViews);
 
             // Don't bother with Calendar if its not visible
             if (showCalendar) {
@@ -400,6 +408,29 @@ public class ClockWidgetService extends IntentService {
     }
 
     //===============================================================================================
+    // Notification related functionality
+    //===============================================================================================
+    private void refreshNotification(RemoteViews notificationViews) {
+        boolean showNotifications = false;
+
+        // Remove all the views to start
+        notificationViews.removeAllViews(R.id.notification_panel);
+
+        if (D) Log.v(TAG, "Refreshing Notifications");
+        for (Notification notification : ClockWidgetProvider.getNotifications()) {
+            final RemoteViews itemView = Notification.createItemView(this);
+
+            if (D) Log.v(TAG, " Refreshing notification: " + notification.getClass().getName());
+            if (notification.hasNotifications()) {
+                showNotifications = true;
+                notification.updateView(itemView);
+                notificationViews.addView(R.id.notification_panel, itemView);
+            }
+        }
+        notificationViews.setViewVisibility(R.id.notification_panel, showNotifications ? View.VISIBLE : View.GONE);
+    }
+
+    //===============================================================================================
     // Calendar related functionality
     //===============================================================================================
     private void refreshCalendar(RemoteViews calendarViews, int widgetId) {
@@ -425,14 +456,22 @@ public class ClockWidgetService extends IntentService {
         calendarViews.setPendingIntentTemplate(R.id.calendar_list, eventClickPendingIntent);
     }
 
-    public static PendingIntent getRefreshIntent(Context context) {
+    private static PendingIntent getRefreshIntent(Context context, String actionRefresh) {
         Intent i = new Intent(context, ClockWidgetService.class);
-        i.setAction(ClockWidgetService.ACTION_REFRESH_CALENDAR);
+        i.setAction(actionRefresh);
         return PendingIntent.getService(context, 0, i, PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    public static PendingIntent getWidgetRefreshIntent(Context context) {
+        return getRefreshIntent(context, ClockWidgetService.ACTION_REFRESH);
+    }
+
+    public static PendingIntent getCalendarRefreshIntent(Context context) {
+        return getRefreshIntent(context, ClockWidgetService.ACTION_REFRESH_CALENDAR);
     }
 
     public static void cancelUpdates(Context context) {
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        am.cancel(getRefreshIntent(context));
+        am.cancel(getCalendarRefreshIntent(context));
     }
 }
